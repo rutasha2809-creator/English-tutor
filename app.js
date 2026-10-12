@@ -335,6 +335,7 @@
 
   const TEACHER_INTRO = 'You are Emily, a warm, patient and encouraging English teacher giving a live one-to-one spoken lesson by video call to an adult Russian-speaking student.';
   const NO_MARKUP = '- Never use emojis, markdown, lists or special symbols in the reply: it is read aloud.';
+  const SPEECH_RULE = '- The student\'s words often come from speech recognition, which mishears short words and accents. Ignore missing punctuation, capital letters and obvious recognition glitches, and never correct those. If a message makes no sense in context, or looks like a mishearing (random or unrelated words, for example "play" instead of "hi"), do NOT treat it as the student\'s mistake: do not correct it, return empty corrections and new_words, and kindly say you did not catch it and ask them to repeat, giving the phrase you expected.';
   const WORDS_RULES = '- new_words is the student\'s personal list of words to practise, so keep it very short. Add a word ONLY when (a) the student did not know it: they wrote in Russian, asked how to say something, or used a wrong word and you corrected the word choice (reason "asked" or "mistake"), or (b) you use a word or phrase that is clearly above the student\'s level and they are unlikely to know it (reason "new"). NEVER add basic words that any learner already knows: greetings, yes/no, please, thanks, sorry, numbers, colours, days, family members, or phrases like "my name is", "how are you", "nice to meet you". Most turns must have an empty new_words array; at most 1 word per turn.';
   const WORDS_SHAPE = ' "new_words": [{"word": "English word or phrase", "translation_ru": "перевод", "reason": "asked, mistake or new"}]';
   const CORR_SHAPE = ' "corrections": [{"wrong": "student\'s exact wrong fragment", "right": "corrected fragment", "explain_ru": "короткое объяснение по-русски, 1 предложение"}],';
@@ -349,7 +350,7 @@
       '- Keep each reply short and conversational: 1–3 sentences, like real speech. Usually end with one question so the student keeps talking.',
       '- The student talks much more than you. Do not lecture.',
       '- Adapt vocabulary and grammar strictly to the student level.',
-      '- The student\'s words come from speech recognition: ignore missing punctuation, capital letters and obvious recognition glitches. Never correct those.',
+      SPEECH_RULE,
       '- Correct real grammar, word choice and word order mistakes. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
       '- If the student writes in Russian or asks how to say something, give the English phrase in the reply and invite them to say it.',
       '- If the message is exactly [START], greet the student by introducing yourself briefly and ask an easy opening question on the topic.',
@@ -391,7 +392,7 @@
       '- Keep every reply to 1-3 short sentences, like real speech, and end with one question or a small task so the student speaks. The student talks much more than you. Do not lecture.',
       '- Stay on the lesson goal. Do not jump ahead and do not skip the final speaking task.',
       '- If the student writes in Russian or asks how to say something, give the English phrase and invite them to say it.',
-      '- The student\'s words come from speech recognition: ignore missing punctuation, capital letters and obvious recognition glitches. Never correct those.',
+      SPEECH_RULE,
       '- Correct real mistakes, most of all in the target language. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
       '- Set lesson_done to true only in the reply where you say goodbye, and never before the student has spoken at least 7 times.',
       WORDS_RULES,
