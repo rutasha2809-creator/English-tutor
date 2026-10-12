@@ -25,13 +25,38 @@
     <div class="avatar-wrap" id="avatarWrap" data-state="idle">
       <svg id="avatar" viewBox="0 0 300 330" xmlns="http://www.w3.org/2000/svg" aria-label="Преподаватель">
         <defs>
-          <radialGradient id="bgGlow" cx="50%" cy="45%" r="60%">
-            <stop offset="0%" stop-color="#fbe7d3"/>
-            <stop offset="100%" stop-color="#f3d2b6"/>
-          </radialGradient>
+          <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f6f1ea"/>
+            <stop offset="60%" stop-color="#ece1d8"/>
+            <stop offset="100%" stop-color="#e3d3c8"/>
+          </linearGradient>
           <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#8a3f22"/>
-            <stop offset="100%" stop-color="#6b2d17"/>
+            <stop offset="0%" stop-color="#4a2a1b"/>
+            <stop offset="38%" stop-color="#7a4a2a"/>
+            <stop offset="72%" stop-color="#c58d55"/>
+            <stop offset="100%" stop-color="#e3b87a"/>
+          </linearGradient>
+          <linearGradient id="hairBackGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3d2216"/>
+            <stop offset="50%" stop-color="#6b4026"/>
+            <stop offset="100%" stop-color="#b98550"/>
+          </linearGradient>
+          <linearGradient id="suitGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34405f"/>
+            <stop offset="100%" stop-color="#232c45"/>
+          </linearGradient>
+          <radialGradient id="irisGrad" cx="50%" cy="40%" r="65%">
+            <stop offset="0%" stop-color="#7a9a8a"/>
+            <stop offset="45%" stop-color="#4f6f62"/>
+            <stop offset="100%" stop-color="#22352e"/>
+          </radialGradient>
+          <radialGradient id="faceGlow" cx="50%" cy="42%" r="62%">
+            <stop offset="0%" stop-color="#fbd5bb"/>
+            <stop offset="100%" stop-color="#f1b896"/>
+          </radialGradient>
+          <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f6d98b"/>
+            <stop offset="100%" stop-color="#c99a3c"/>
           </linearGradient>
           <clipPath id="frameClip"><circle cx="150" cy="165" r="150"/></clipPath>
           <clipPath id="mouthClip">
@@ -41,62 +66,111 @@
 
         <g clip-path="url(#frameClip)">
         <circle cx="150" cy="165" r="150" fill="url(#bgGlow)"/>
+        <!-- мягкий боке-фон -->
+        <circle cx="60" cy="86" r="34" fill="#fff" opacity=".45"/>
+        <circle cx="250" cy="70" r="22" fill="#fff" opacity=".4"/>
+        <circle cx="258" cy="150" r="14" fill="#f4dcc8" opacity=".7"/>
+        <circle cx="40" cy="170" r="10" fill="#fff" opacity=".35"/>
+
+        <!-- волосы сзади: асимметричное каре -->
+        <path id="hairBack" d="M80 148 C72 66 118 40 154 40 C198 40 234 66 226 148 C226 170 222 190 214 202 C196 206 190 196 192 180 L112 196 C112 214 104 232 84 240 C70 226 80 190 80 148 Z" fill="url(#hairBackGrad)"/>
 
         <g id="body">
-          <!-- плечи и кардиган -->
-          <path d="M40 330 C48 268 92 246 150 246 C208 246 252 268 260 330 Z" fill="#2f6f6a"/>
-          <path d="M122 248 L150 300 L178 248 Z" fill="#f7efe6"/>
-          <path d="M122 248 L150 300 L136 330 L104 330 Z" fill="#285f5b"/>
-          <path d="M178 248 L150 300 L164 330 L196 330 Z" fill="#285f5b"/>
-          <circle cx="150" cy="300" r="3" fill="#e8b04b"/>
+          <!-- плечи: приталенный пиджак -->
+          <path d="M16 330 L22 296 C26 282 40 276 60 270 C92 260 114 253 132 248 L168 248 C186 253 208 260 240 270 C260 276 274 282 278 296 L284 330 Z" fill="url(#suitGrad)"/>
+          <path d="M62 270 C56 290 54 310 54 330 M238 270 C244 290 246 310 246 330" stroke="#1a2238" stroke-width="2" fill="none" opacity=".35"/>
+          <path d="M62 271 C90 262 112 255 130 250" stroke="#fff" stroke-width="2" fill="none" opacity=".14" stroke-linecap="round"/>
+          <!-- топ под пиджаком -->
+          <path d="M127 249 L150 330 L173 249 Z" fill="#f4ece2"/>
           <!-- шея -->
-          <path d="M132 222 L132 254 Q150 266 168 254 L168 222 Z" fill="#e9b493"/>
+          <path d="M138 214 L138 250 Q150 264 162 250 L162 214 Z" fill="#eaa98a"/>
+          <path d="M127 249 L150 290 L173 249 Q150 262 127 249 Z" fill="#eaa98a"/>
+          <path d="M138 224 Q150 236 162 224 L162 214 L138 214 Z" fill="#d68f6f" opacity=".5"/>
+          <!-- лацканы -->
+          <path d="M104 258 L127 249 L150 296 L128 312 L112 288 Z" fill="#41507a"/>
+          <path d="M196 258 L173 249 L150 296 L172 312 L188 288 Z" fill="#41507a"/>
+          <path d="M112 288 L128 312 M188 288 L172 312" stroke="#232c45" stroke-width="2" opacity=".6"/>
+          <path d="M127 249 L150 296 L173 249" stroke="#1a2238" stroke-width="1.5" fill="none" opacity=".5"/>
+          <!-- колье и кулон -->
+          <path d="M134 253 Q150 282 166 253" stroke="url(#goldGrad)" stroke-width="1.8" fill="none"/>
+          <path d="M138 252 Q150 272 162 252" stroke="url(#goldGrad)" stroke-width="1.4" fill="none" opacity=".8"/>
+          <path d="M150 276 l5 6 -5 6 -5 -6 z" fill="url(#goldGrad)"/>
+          <!-- брошь на лацкане -->
+          <circle cx="112" cy="272" r="3.6" fill="url(#goldGrad)"/><circle cx="112" cy="272" r="1.3" fill="#fff6d6"/>
+          <!-- плечевой блик -->
+          
         </g>
 
         <g id="head">
-          <!-- волосы сзади -->
-          <path d="M78 150 C70 70 120 46 152 46 C196 46 234 74 226 152 C224 200 232 230 238 244 C214 252 196 238 192 220 L108 220 C104 238 86 252 62 244 C70 226 80 200 78 150 Z" fill="url(#hairGrad)"/>
-          <!-- уши -->
-          <ellipse cx="94" cy="160" rx="10" ry="15" fill="#e3a987"/>
-          <ellipse cx="206" cy="160" rx="10" ry="15" fill="#e3a987"/>
-          <circle cx="94" cy="176" r="3.5" fill="#e8b04b"/>
-          <circle cx="206" cy="176" r="3.5" fill="#e8b04b"/>
-          <!-- лицо -->
-          <path d="M96 140 C96 92 122 74 150 74 C178 74 204 92 204 140 C204 190 182 228 150 228 C118 228 96 190 96 140 Z" fill="#f0bf9f"/>
-          <!-- чёлка -->
-          <path d="M92 132 C96 84 128 62 156 64 C190 66 212 92 210 134 C196 110 176 98 150 96 C128 104 112 116 92 132 Z" fill="url(#hairGrad)"/>
+          <!-- правое ухо (волосы убраны за ухо) -->
+          <ellipse cx="205" cy="162" rx="8" ry="13" fill="#e9a584"/>
+          <path d="M203 156 q4 4 0 12" stroke="#cf8d6c" stroke-width="1.5" fill="none"/>
+          <!-- лицо: тонкая линия скул -->
+          <path d="M96 142 C96 94 121 72 150 72 C179 72 204 94 204 142 C204 176 192 204 174 220 Q150 238 126 220 C108 204 96 176 96 142 Z" fill="url(#faceGlow)"/>
+          <!-- контуринг -->
+          <path d="M100 170 Q112 196 134 218" stroke="#cf8a68" stroke-width="7" fill="none" opacity=".16" stroke-linecap="round"/>
+          <path d="M200 170 Q188 196 166 218" stroke="#cf8a68" stroke-width="7" fill="none" opacity=".16" stroke-linecap="round"/>
           <!-- румянец -->
-          <ellipse cx="118" cy="182" rx="12" ry="7" fill="#ec9c8a" opacity=".45"/>
-          <ellipse cx="182" cy="182" rx="12" ry="7" fill="#ec9c8a" opacity=".45"/>
+          <ellipse cx="114" cy="184" rx="14" ry="7" fill="#ee8f8a" opacity=".38"/>
+          <ellipse cx="186" cy="184" rx="14" ry="7" fill="#ee8f8a" opacity=".38"/>
+          <!-- тени на веках -->
+          <ellipse cx="125" cy="143" rx="15" ry="7" fill="#c98a7a" opacity=".32"/>
+          <ellipse cx="175" cy="143" rx="15" ry="7" fill="#c98a7a" opacity=".32"/>
           <!-- брови -->
           <g id="brows">
-            <path d="M112 132 Q126 124 138 130" stroke="#5c2614" stroke-width="4" fill="none" stroke-linecap="round"/>
-            <path d="M162 130 Q174 124 188 132" stroke="#5c2614" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M107 128 Q124 116 142 124" stroke="#4a2616" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M158 124 Q176 116 193 128" stroke="#4a2616" stroke-width="4" fill="none" stroke-linecap="round"/>
           </g>
           <!-- глаза -->
           <g id="eyes">
             <g class="eye" id="eyeL">
-              <ellipse cx="126" cy="152" rx="10" ry="11" fill="#fff"/>
-              <g class="pupil"><circle cx="126" cy="153" r="6.5" fill="#3d2a1e"/><circle cx="128" cy="150" r="2" fill="#fff"/></g>
-              <rect class="lid" x="114" y="139" width="24" height="0" fill="#f0bf9f"/>
+              <ellipse cx="125" cy="152" rx="12.5" ry="13.5" fill="#fff"/>
+              <g class="pupil"><circle cx="125" cy="153" r="9.2" fill="url(#irisGrad)"/><circle cx="125" cy="153" r="4" fill="#0f1a15"/><circle cx="129" cy="148" r="3.4" fill="#fff"/><circle cx="120.5" cy="158" r="1.5" fill="#fff" opacity=".85"/></g>
+              <rect class="lid" x="108" y="136" width="34" height="0" fill="#f5bd9d"/>
+              <path d="M110 152 Q125 136 140 150" stroke="#1c0f08" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+              <path d="M111 151 L106 147" stroke="#1c0f08" stroke-width="2.2" stroke-linecap="round"/>
             </g>
             <g class="eye" id="eyeR">
-              <ellipse cx="174" cy="152" rx="10" ry="11" fill="#fff"/>
-              <g class="pupil"><circle cx="174" cy="153" r="6.5" fill="#3d2a1e"/><circle cx="176" cy="150" r="2" fill="#fff"/></g>
-              <rect class="lid" x="162" y="139" width="24" height="0" fill="#f0bf9f"/>
+              <ellipse cx="175" cy="152" rx="12.5" ry="13.5" fill="#fff"/>
+              <g class="pupil"><circle cx="175" cy="153" r="9.2" fill="url(#irisGrad)"/><circle cx="175" cy="153" r="4" fill="#0f1a15"/><circle cx="179" cy="148" r="3.4" fill="#fff"/><circle cx="170.5" cy="158" r="1.5" fill="#fff" opacity=".85"/></g>
+              <rect class="lid" x="158" y="136" width="34" height="0" fill="#f5bd9d"/>
+              <path d="M160 150 Q175 136 190 152" stroke="#1c0f08" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+              <path d="M189 151 L194 147" stroke="#1c0f08" stroke-width="2.2" stroke-linecap="round"/>
             </g>
           </g>
           <!-- нос -->
-          <path d="M150 162 Q146 180 142 184 Q150 188 156 184" stroke="#cf8f6f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M150 162 Q148 180 143 185 Q150 189 157 185" stroke="#cf8d6c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+          <path d="M151 164 Q152 176 150 181" stroke="#fde3cf" stroke-width="2" fill="none" opacity=".6" stroke-linecap="round"/>
           <!-- рот -->
           <g id="mouth">
-            <ellipse id="mouthInner" cx="150" cy="208" rx="17" ry="2" fill="#7a2a2a"/>
+            <ellipse id="mouthInner" cx="150" cy="208" rx="17" ry="2" fill="#6e2430" stroke="#d95a74" stroke-width="3"/>
             <g clip-path="url(#mouthClip)">
               <rect x="133" y="198" width="34" height="7" rx="2" fill="#fff"/>
-              <ellipse cx="150" cy="218" rx="10" ry="6" fill="#d9646a"/>
+              <ellipse cx="150" cy="218" rx="10" ry="6" fill="#d9646e"/>
             </g>
-            <path id="lipLine" d="M131 206 Q150 216 169 206" stroke="#b5535a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <g id="lipLine">
+              <path d="M133 207 Q141 200 148.5 203 Q150 202 151.5 203 Q159 200 167 207 Q150 210 133 207 Z" fill="#c24d68"/>
+              <path d="M133 207 Q150 210 167 207 Q162 219 150 220 Q138 219 133 207 Z" fill="#df6a84"/>
+              <ellipse cx="150" cy="213" rx="5" ry="1.5" fill="#fff" opacity=".45"/>
+            </g>
           </g>
+
+          <!-- волосы: чёлка набок и боковая прядь -->
+          <path d="M88 156 C80 84 122 54 160 56 C200 58 220 92 212 134 C204 108 188 94 166 92 C142 90 124 104 112 130 C106 142 100 152 98 168 Z" fill="url(#hairGrad)"/>
+          <path d="M98 168 C94 196 96 218 88 238 C112 232 120 214 118 194 C112 176 108 154 112 130 Z" fill="url(#hairGrad)"/>
+          <!-- мелирование -->
+          <path d="M112 100 C128 78 152 68 176 74" stroke="#e8c48a" stroke-width="3" fill="none" opacity=".75" stroke-linecap="round"/>
+          <path d="M120 112 C134 92 154 84 172 86" stroke="#d99a6a" stroke-width="2.2" fill="none" opacity=".7" stroke-linecap="round"/>
+          <path d="M100 184 C100 204 100 218 96 232" stroke="#f0cf96" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/>
+          <!-- прядь за ухом справа -->
+          <path d="M204 128 C214 150 214 170 210 182 C216 168 218 140 212 120 Z" fill="url(#hairBackGrad)"/>
+          <!-- серьги -->
+          <circle cx="205" cy="174" r="3" fill="url(#goldGrad)"/>
+          <path d="M205 177 L205 186" stroke="url(#goldGrad)" stroke-width="1.6"/>
+          <path d="M205 186 l6 8 -6 8 -6 -8 z" fill="url(#goldGrad)"/>
+          <path d="M205 190 l2.5 4 -2.5 4 -2.5 -4 z" fill="#fff6d6" opacity=".7"/>
+          <circle cx="96" cy="226" r="3" fill="url(#goldGrad)"/>
+          <path d="M96 229 l5 7 -5 7 -5 -7 z" fill="url(#goldGrad)"/>
         </g>
         </g>
       </svg>

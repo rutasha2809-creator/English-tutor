@@ -135,7 +135,7 @@
 
   // ---------- аватар: моргание и рот ----------
   function blink() {
-    el.lids.forEach((l) => l.setAttribute('height', '26'));
+    el.lids.forEach((l) => l.setAttribute('height', '31'));
     setTimeout(() => el.lids.forEach((l) => l.setAttribute('height', '0')), 130);
   }
   (function blinkLoop() {
