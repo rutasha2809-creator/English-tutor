@@ -89,10 +89,10 @@
   let recognitionActive = false;
 
   const STATE_LABEL = {
-    idle: 'Готова к уроку',
-    listening: 'Слушаю…',
-    thinking: 'Думаю…',
-    speaking: 'Говорю…',
+    idle: 'Ready for the lesson',
+    listening: 'Listening…',
+    thinking: 'Thinking…',
+    speaking: 'Speaking…',
   };
 
   function setState(s) {
@@ -114,7 +114,7 @@
     toastTimer = setTimeout(() => el.toast.classList.remove('show'), isError ? 4500 : 2400);
   }
 
-  function confirmAction(text, yesLabel = 'Да') {
+  function confirmAction(text, yesLabel = 'Yes') {
     return new Promise((resolve) => {
       el.confirmText.textContent = text;
       el.confirmYes.textContent = yesLabel;
@@ -183,7 +183,7 @@
     });
     el.setVoice.innerHTML = '';
     if (!voices.length) {
-      el.setVoice.innerHTML = '<option value="">Голос по умолчанию</option>';
+      el.setVoice.innerHTML = '<option value="">Default voice</option>';
       return;
     }
     voices.forEach((v) => {
@@ -262,12 +262,12 @@
 
   function startListening() {
     if (!SR) {
-      toast('Этот браузер не умеет распознавать речь. Откройте приложение в Google Chrome или Microsoft Edge.', true);
+      toast('This browser cannot recognise speech. Please open the app in Google Chrome or Microsoft Edge.', true);
       el.autoMic.checked = false;
       return;
     }
     if (busy || recognitionActive) return;
-    if (!apiKey) { openSettings(); toast('Сначала вставьте ключ Groq', true); return; }
+    if (!apiKey) { openSettings(); toast('Please paste your Groq key first', true); return; }
     stopSpeaking();
     recognition = new SR();
     recognition.lang = settings.recLang;
@@ -286,10 +286,10 @@
     };
     recognition.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        toast('Нет доступа к микрофону. Разрешите его в настройках сайта (значок замка в адресной строке).', true);
+        toast('No access to the microphone. Allow it in the site settings (the lock icon in the address bar).', true);
         el.autoMic.checked = false;
       } else if (e.error === 'network') {
-        toast('Распознавание речи недоступно: нет связи с сервисом браузера', true);
+        toast('Speech recognition is unavailable: no connection to the browser service', true);
       } else if (e.error === 'no-speech') {
         // тишина — просто выходим из режима ожидания и не перезапускаем авто-микрофон
         autoMicPaused = true;
@@ -472,23 +472,23 @@
         body: JSON.stringify(body),
       });
     } catch {
-      throw new ApiError('Нет связи с Groq. Проверьте интернет (из России сервис недоступен).', 0);
+      throw new ApiError('Cannot reach Groq. Check your internet connection (the service is not available from Russia).', 0);
     }
     if (!res.ok) {
       let detail = '';
       try { detail = (await res.json())?.error?.message || ''; } catch { /* ignore */ }
-      if (res.status === 401) throw new ApiError('Ключ Groq не подошёл. Проверьте его в настройках.', 401);
-      if (res.status === 403) throw new ApiError('Groq отказал в доступе (возможно, из-за региона).', 403);
+      if (res.status === 401) throw new ApiError('The Groq key was not accepted. Check it in Settings.', 401);
+      if (res.status === 403) throw new ApiError('Groq refused access (possibly because of your region).', 403);
       if (res.status === 429) {
         const wait = res.headers.get('retry-after') || (detail.match(/try again in ([\d.]+)s/i) || [])[1];
         throw new ApiError(wait
-          ? `Бесплатный лимит на минуту исчерпан. Подождите ~${Math.ceil(Number(wait))} сек. и повторите.`
-          : 'Бесплатный лимит исчерпан. Подождите немного и повторите.', 429);
+          ? `The free per-minute limit is used up. Wait ~${Math.ceil(Number(wait))} s and try again.`
+          : 'The free limit is used up. Wait a little and try again.', 429);
       }
       if (res.status === 400 && useJsonMode && /json/i.test(detail)) {
         return callGroq(messages, false); // модель не уложилась в JSON — пробуем без строгого режима
       }
-      throw new ApiError(`Ошибка Groq (${res.status})${detail ? ': ' + detail : ''}`, res.status);
+      throw new ApiError(`Groq error (${res.status})${detail ? ': ' + detail : ''}`, res.status);
     }
     const data = await res.json();
     return data?.choices?.[0]?.message?.content || '';
@@ -525,7 +525,7 @@
   async function sendMessage(text, { hidden = false } = {}) {
     text = String(text || '').trim();
     if (!text || busy) return;
-    if (!apiKey) { openSettings(); toast('Сначала вставьте ключ Groq', true); return; }
+    if (!apiKey) { openSettings(); toast('Please paste your Groq key first', true); return; }
 
     stopSpeaking();
     el.input.value = '';
@@ -573,7 +573,7 @@
         removeLastStudentBubble();
         el.input.value = text;
       }
-      systemNote(err.message || 'Что-то пошло не так', true);
+      systemNote(err.message || 'Something went wrong', true);
       if (err.status === 401) openSettings();
     }
   }
@@ -593,7 +593,7 @@
       const card = document.createElement('div');
       card.className = 'note-card';
       if (m.kind === 'recap') {
-        const h = document.createElement('div'); h.className = 'note-title'; h.textContent = 'Итог урока';
+        const h = document.createElement('div'); h.className = 'note-title'; h.textContent = 'Lesson summary';
         card.appendChild(h);
       }
       const p = document.createElement('div'); p.textContent = m.text;
@@ -615,7 +615,7 @@
       const again = document.createElement('button');
       again.type = 'button';
       again.className = 'icon-btn';
-      again.textContent = 'Повторить';
+      again.textContent = 'Retry';
       again.onclick = () => { stopListening(true); speak(m.text); };
       tools.appendChild(again);
       wrap.appendChild(tools);
@@ -702,7 +702,7 @@
     if (!words.length) {
       const li = document.createElement('li');
       li.className = 'empty';
-      li.textContent = 'Пока пусто';
+      li.textContent = 'Nothing here yet';
       el.wordsList.appendChild(li);
       return;
     }
@@ -713,18 +713,18 @@
       const t = document.createElement('span'); t.className = 't'; t.textContent = ' — ' + w.translation;
       left.append(a, t);
       const say = document.createElement('button');
-      say.type = 'button'; say.className = 'icon-btn'; say.textContent = 'Произнести';
+      say.type = 'button'; say.className = 'icon-btn'; say.textContent = 'Say it';
       say.onclick = () => speak(w.word);
       const del = document.createElement('button');
-      del.type = 'button'; del.className = 'icon-btn danger'; del.textContent = 'Убрать';
+      del.type = 'button'; del.className = 'icon-btn danger'; del.textContent = 'Remove';
       del.onclick = async () => {
-        if (!(await confirmAction(`Убрать слово «${w.word}» из списка?`, 'Убрать'))) return;
+        if (!(await confirmAction(`Remove the word “${w.word}” from the list?`, 'Remove'))) return;
         const i = words.indexOf(w);
         if (i < 0) return;
         words.splice(i, 1);
         const ok = store.set(LS.words, words);
         renderWords();
-        toast(ok ? 'Слово убрано' : 'Не удалось сохранить список в браузере', !ok);
+        toast(ok ? 'Word removed' : 'Could not save the word list in this browser', !ok);
       };
       const actions = document.createElement('div');
       actions.className = 'word-actions';
@@ -738,7 +738,7 @@
   function openSettings() {
     el.setKey.value = apiKey;
     el.setKey.type = 'password';
-    el.showKey.textContent = 'Показать';
+    el.showKey.textContent = 'Show';
     el.setLevel.value = settings.level;
     el.setTopic.value = settings.topic;
     el.setRate.value = settings.rate;
@@ -765,7 +765,7 @@
   function saveSettingsFromForm() {
     const key = el.setKey.value.trim();
     if (key && !/^gsk_\S{10,}$/.test(key)) {
-      toast('Похоже, ключ вставлен не полностью: он должен начинаться с gsk_', true);
+      toast('The key looks incomplete: it should start with gsk_', true);
       el.setKey.focus();
       return;
     }
@@ -774,9 +774,9 @@
     apiKey = key;
     const ok = store.set(LS.settings, settings) && store.set(LS.key, apiKey);
     el.dlg.close();
-    toast(ok ? 'Настройки сохранены' : 'Не удалось сохранить настройки в браузере', !ok);
+    toast(ok ? 'Settings saved' : 'Could not save the settings in this browser', !ok);
     if (ok && apiKey && prevLevelTopic !== settings.level + '|' + settings.topic && lesson.messages.length && lesson.mode === 'free') {
-      systemNote('Новый уровень или тема применятся со следующей реплики');
+      systemNote('The new level or topic will apply from the next message');
     }
   }
 
@@ -822,7 +822,7 @@
       b.type = 'button';
       b.id = 'btnStartLevel';
       b.className = 'btn ghost small';
-      b.textContent = `Начать с уровня ${viewLevel}`;
+      b.textContent = `Start from level ${viewLevel}`;
       b.onclick = () => startFromLevel(viewLevel);
       el.levelStart.appendChild(b);
     }
@@ -840,11 +840,10 @@
       b.disabled = !open;
       const num = document.createElement('span'); num.className = 'lesson-num'; num.textContent = String(l.n);
       const txt = document.createElement('span'); txt.className = 'lesson-text';
-      const ru = document.createElement('span'); ru.className = 'lesson-ru'; ru.textContent = l.ru;
-      const en = document.createElement('span'); en.className = 'lesson-en'; en.textContent = l.en;
-      txt.append(ru, en);
+      const en = document.createElement('span'); en.className = 'lesson-ru'; en.textContent = l.en;
+      txt.append(en);
       const st = document.createElement('span'); st.className = 'lesson-status';
-      st.textContent = active ? 'Идёт сейчас' : done ? 'Пройден' : open ? 'Начать' : 'Закрыт';
+      st.textContent = active ? 'In progress' : done ? 'Completed' : open ? 'Start' : 'Locked';
       b.append(num, txt, st);
       b.onclick = () => openLesson(l.id);
       li.appendChild(b);
@@ -856,8 +855,8 @@
     const l = currentLesson();
     const placement = lesson.mode === 'placement';
     el.lessonBar.classList.toggle('hidden', !l && !placement);
-    if (l) el.lessonBarTitle.textContent = `${l.level} · Урок ${l.n}: ${l.ru}`;
-    else if (placement) el.lessonBarTitle.textContent = 'Вводный разговор';
+    if (l) el.lessonBarTitle.textContent = `${l.level} · Lesson ${l.n}: ${l.en}`;
+    else if (placement) el.lessonBarTitle.textContent = 'Placement chat';
     el.btnFinish.classList.toggle('hidden', !l);
     el.btnFinish.disabled = !l || studentTurns() < MIN_TURNS_MANUAL;
   }
@@ -868,12 +867,12 @@
     store.set(LS.settings, settings);
     const ok = saveProgress();
     renderProgram();
-    toast(ok ? `Уровень ${level} открыт` : 'Не удалось сохранить прогресс в браузере', !ok);
+    toast(ok ? `Level ${level} unlocked` : 'Could not save your progress in this browser', !ok);
   }
 
   async function beginSession(next, confirmText, yesLabel) {
     if (busy) return;
-    if (!apiKey) { openSettings(); toast('Сначала вставьте ключ Groq', true); return; }
+    if (!apiKey) { openSettings(); toast('Please paste your Groq key first', true); return; }
     if (lesson.messages.length) {
       if (!(await confirmAction(confirmText, yesLabel))) return;
       if (busy) return;
@@ -892,13 +891,13 @@
 
   function newLesson() {
     return beginSession({ mode: 'free' },
-      'Начать новый урок? Текущий диалог будет удалён (слова в «Моих словах» останутся).', 'Начать новый')
-      .then(() => { if (lesson.mode === 'free' && lesson.messages.length) toast('Новый урок начат'); });
+      'Start a new lesson? The current conversation will be deleted (the words in “My words” stay).', 'Start new')
+      .then(() => { if (lesson.mode === 'free' && lesson.messages.length) toast('New lesson started'); });
   }
 
   function startPlacement() {
     return beginSession({ mode: 'placement' },
-      'Начать вводный разговор? Текущий диалог будет удалён.', 'Начать');
+      'Start the placement chat? The current conversation will be deleted.', 'Start');
   }
 
   async function openLesson(id) {
@@ -907,14 +906,14 @@
     if (!l || !isLessonOpen(l)) return;
     if (lesson.mode === 'course' && lesson.lessonId === id && lesson.messages.length) { showTab('chat'); return; }
     await beginSession({ mode: 'course', lessonId: id },
-      `Начать урок «${l.ru}»? Текущий диалог будет удалён (слова и пройденные уроки останутся).`, 'Начать');
+      `Start the lesson “${l.en}”? The current conversation will be deleted (your words and completed lessons stay).`, 'Start');
   }
 
   function completeLesson(recapRu) {
     const id = lesson.lessonId;
     if (id) progress.done[id] = { at: new Date().toISOString() };
     const ok = saveProgress();
-    const note = { role: 'note', kind: 'recap', text: recapRu || 'Урок пройден' };
+    const note = { role: 'note', kind: 'recap', text: recapRu || 'Lesson completed' };
     lesson.messages.push(note);
     lesson.mode = 'free';
     lesson.lessonId = null;
@@ -922,7 +921,7 @@
     renderMessage(note);
     renderProgram();
     updateLessonBar();
-    toast(ok ? 'Урок пройден' : 'Не удалось сохранить прогресс в браузере', !ok);
+    toast(ok ? 'Lesson completed' : 'Could not save your progress in this browser', !ok);
   }
 
   function finishPlacement(level) {
@@ -931,7 +930,7 @@
     settings.level = level;
     store.set(LS.settings, settings);
     const ok = saveProgress();
-    const note = { role: 'note', kind: 'level', text: `Ваш уровень: ${level}` };
+    const note = { role: 'note', kind: 'level', text: `Your level: ${level}` };
     lesson.messages.push(note);
     lesson.mode = 'free';
     lesson.lessonId = null;
@@ -940,7 +939,7 @@
     viewLevel = start;
     renderProgram();
     updateLessonBar();
-    toast(ok ? `Уровень определён: ${level}` : 'Не удалось сохранить прогресс в браузере', !ok);
+    toast(ok ? `Level set: ${level}` : 'Could not save your progress in this browser', !ok);
   }
 
   // ---------- события ----------
@@ -958,7 +957,7 @@
   el.autoMic.addEventListener('change', () => {
     settings.autoMic = el.autoMic.checked;
     store.set(LS.settings, settings);
-    toast(settings.autoMic ? 'Авто-микрофон включён' : 'Авто-микрофон выключен');
+    toast(settings.autoMic ? 'Auto-mic on' : 'Auto-mic off');
   });
   el.composer.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -972,7 +971,7 @@
   el.btnPlacement.addEventListener('click', startPlacement);
   el.btnFinish.addEventListener('click', async () => {
     if (busy || lesson.mode !== 'course' || studentTurns() < MIN_TURNS_MANUAL) return;
-    if (!(await confirmAction('Завершить урок и отметить его пройденным?', 'Завершить'))) return;
+    if (!(await confirmAction('Finish the lesson and mark it as completed?', 'Finish'))) return;
     if (busy || lesson.mode !== 'course') return;
     autoMicPaused = true;
     stopListening(true);
@@ -983,11 +982,11 @@
 
   el.clearWords.addEventListener('click', async () => {
     if (!words.length) return;
-    if (!(await confirmAction(`Удалить все слова из списка (${words.length})?`, 'Удалить'))) return;
+    if (!(await confirmAction(`Delete all words from the list (${words.length})?`, 'Delete'))) return;
     words = [];
     store.set(LS.words, words);
     renderWords();
-    toast('Список слов очищен');
+    toast('Word list cleared');
   });
 
   el.newLesson.addEventListener('click', newLesson);
@@ -998,7 +997,7 @@
   el.showKey.addEventListener('click', () => {
     const hidden = el.setKey.type === 'password';
     el.setKey.type = hidden ? 'text' : 'password';
-    el.showKey.textContent = hidden ? 'Скрыть' : 'Показать';
+    el.showKey.textContent = hidden ? 'Hide' : 'Show';
   });
   el.setRate.addEventListener('input', () => { el.rateVal.textContent = Number(el.setRate.value).toFixed(2); });
   el.testVoice.addEventListener('click', () => {
@@ -1008,11 +1007,11 @@
   el.deleteKey.addEventListener('click', async () => {
     if (!apiKey) return;
     el.dlg.close();
-    const ok = await confirmAction('Удалить ключ Groq из этого браузера?', 'Удалить');
+    const ok = await confirmAction('Delete the Groq key from this browser?', 'Delete');
     if (ok) {
       apiKey = '';
       store.del(LS.key);
-      toast('Ключ удалён');
+      toast('Key deleted');
     }
     openSettings();
   });
@@ -1027,7 +1026,7 @@
   updateLessonBar();
   setState('idle');
   showTab(lesson.messages.length ? 'chat' : 'program');
-  if (!SR) systemNote('Голосовой ввод работает в Google Chrome и Microsoft Edge. Здесь можно писать текстом.');
+  if (!SR) systemNote('Voice input works in Google Chrome and Microsoft Edge. Here you can type instead.');
   if (!apiKey) openSettings();
 
   // для автотестов

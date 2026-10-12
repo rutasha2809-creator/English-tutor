@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,8 +14,8 @@
 <header class="topbar">
   <div class="brand">English Tutor</div>
   <div class="topbar-actions">
-    <button class="btn ghost" id="btnNewLesson" type="button">Свободный разговор</button>
-    <button class="btn ghost" id="btnSettings" type="button">Настройки</button>
+    <button class="btn ghost" id="btnNewLesson" type="button">Free chat</button>
+    <button class="btn ghost" id="btnSettings" type="button">Settings</button>
   </div>
 </header>
 
@@ -23,7 +23,7 @@
   <!-- Преподаватель -->
   <section class="stage">
     <div class="avatar-wrap" id="avatarWrap" data-state="idle">
-      <svg id="avatar" viewBox="0 0 300 330" xmlns="http://www.w3.org/2000/svg" aria-label="Преподаватель">
+      <svg id="avatar" viewBox="0 0 300 330" xmlns="http://www.w3.org/2000/svg" aria-label="Teacher">
         <defs>
           <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#f6f1ea"/>
@@ -174,17 +174,17 @@
         </g>
         </g>
       </svg>
-      <div class="state-pill" id="statePill">Готова к уроку</div>
+      <div class="state-pill" id="statePill">Ready for the lesson</div>
     </div>
 
     <div class="controls">
-      <button class="mic-btn" id="btnMic" type="button" aria-label="Говорить">
+      <button class="mic-btn" id="btnMic" type="button" aria-label="Speak">
         <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
       </button>
-      <button class="btn ghost" id="btnStop" type="button">Стоп</button>
+      <button class="btn ghost" id="btnStop" type="button">Stop</button>
       <label class="switch">
         <input type="checkbox" id="autoMic">
-        <span>Авто-микрофон</span>
+        <span>Auto-mic</span>
       </label>
     </div>
   </section>
@@ -192,15 +192,15 @@
   <!-- Диалог и слова -->
   <section class="panel">
     <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="program" type="button">Программа</button>
-      <button class="tab" data-tab="chat" type="button">Урок</button>
-      <button class="tab" data-tab="words" type="button">Мои слова <span class="count" id="wordsCount">0</span></button>
+      <button class="tab active" data-tab="program" type="button">Program</button>
+      <button class="tab" data-tab="chat" type="button">Lesson</button>
+      <button class="tab" data-tab="words" type="button">My words <span class="count" id="wordsCount">0</span></button>
     </div>
 
     <div class="tab-body" id="tab-program">
       <div class="program-top">
         <div class="chips" id="levelChips"></div>
-        <button class="btn ghost small" id="btnPlacement" type="button">Вводный разговор</button>
+        <button class="btn ghost small" id="btnPlacement" type="button">Placement chat</button>
       </div>
       <div class="level-start" id="levelStart"></div>
       <ol class="lessons" id="lessonsList"></ol>
@@ -209,18 +209,18 @@
     <div class="tab-body hidden" id="tab-chat">
       <div class="lesson-bar hidden" id="lessonBar">
         <div class="lesson-bar-title" id="lessonBarTitle"></div>
-        <button class="btn ghost small" id="btnFinishLesson" type="button">Завершить урок</button>
+        <button class="btn ghost small" id="btnFinishLesson" type="button">Finish lesson</button>
       </div>
       <div class="chat" id="chat"></div>
       <form class="composer" id="composer">
-        <input type="text" id="textInput" autocomplete="off" placeholder="Напишите или нажмите на микрофон…">
-        <button class="btn primary" id="btnSend" type="submit">Отправить</button>
+        <input type="text" id="textInput" autocomplete="off" placeholder="Type or tap the microphone…">
+        <button class="btn primary" id="btnSend" type="submit">Send</button>
       </form>
     </div>
 
     <div class="tab-body hidden" id="tab-words">
       <div class="words-head">
-        <button class="btn ghost small" id="btnClearWords" type="button">Очистить список</button>
+        <button class="btn ghost small" id="btnClearWords" type="button">Clear list</button>
       </div>
       <ul class="words" id="wordsList"></ul>
     </div>
@@ -230,76 +230,76 @@
 <!-- Настройки -->
 <dialog id="settingsDlg">
   <form method="dialog" class="dlg" id="settingsForm">
-    <h2>Настройки</h2>
+    <h2>Settings</h2>
 
     <label class="field">
-      <span>Ключ Groq API</span>
+      <span>Groq API key</span>
       <div class="key-row">
         <input type="password" id="setKey" autocomplete="off" spellcheck="false" placeholder="gsk_…">
-        <button class="btn ghost small" id="btnShowKey" type="button">Показать</button>
-        <button class="btn ghost small danger" id="btnDeleteKey" type="button">Удалить</button>
+        <button class="btn ghost small" id="btnShowKey" type="button">Show</button>
+        <button class="btn ghost small danger" id="btnDeleteKey" type="button">Delete</button>
       </div>
     </label>
 
     <div class="grid2">
       <label class="field">
-        <span>Мой уровень</span>
+        <span>My level</span>
         <select id="setLevel">
-          <option value="A1">A1 — начальный</option>
-          <option value="A2">A2 — элементарный</option>
-          <option value="B1">B1 — средний</option>
-          <option value="B2">B2 — выше среднего</option>
-          <option value="C1">C1 — продвинутый</option>
+          <option value="A1">A1 — beginner</option>
+          <option value="A2">A2 — elementary</option>
+          <option value="B1">B1 — intermediate</option>
+          <option value="B2">B2 — upper-intermediate</option>
+          <option value="C1">C1 — advanced</option>
         </select>
       </label>
       <label class="field">
-        <span>Тема урока</span>
+        <span>Lesson topic</span>
         <select id="setTopic">
-          <option value="free conversation about anything the student likes">Свободный разговор</option>
-          <option value="getting to know each other, hobbies and daily life">Знакомство и повседневная жизнь</option>
-          <option value="travel: airports, hotels, asking for directions, restaurants">Путешествия</option>
-          <option value="work and business: meetings, emails, small talk with colleagues, interviews">Работа и бизнес</option>
-          <option value="finance and money: budgets, banking, investments, prices">Финансы и деньги</option>
-          <option value="shopping and services">Покупки и услуги</option>
-          <option value="health and doctor's visits">Здоровье и врачи</option>
+          <option value="free conversation about anything the student likes">Free conversation</option>
+          <option value="getting to know each other, hobbies and daily life">Getting to know each other and daily life</option>
+          <option value="travel: airports, hotels, asking for directions, restaurants">Travel</option>
+          <option value="work and business: meetings, emails, small talk with colleagues, interviews">Work and business</option>
+          <option value="finance and money: budgets, banking, investments, prices">Finance and money</option>
+          <option value="shopping and services">Shopping and services</option>
+          <option value="health and doctor's visits">Health and doctors</option>
         </select>
       </label>
     </div>
 
     <div class="grid2">
       <label class="field">
-        <span>Голос преподавателя</span>
+        <span>Teacher's voice</span>
         <select id="setVoice"></select>
       </label>
       <label class="field">
-        <span>Скорость речи: <b id="rateVal">0.95</b></span>
+        <span>Speech speed: <b id="rateVal">0.95</b></span>
         <input type="range" id="setRate" min="0.6" max="1.3" step="0.05">
       </label>
     </div>
 
     <div class="grid2">
       <label class="field">
-        <span>Акцент для распознавания</span>
+        <span>Accent for recognition</span>
         <select id="setRecLang">
-          <option value="en-GB">Британский (en-GB)</option>
-          <option value="en-US">Американский (en-US)</option>
+          <option value="en-GB">British (en-GB)</option>
+          <option value="en-US">American (en-US)</option>
         </select>
       </label>
       <label class="field">
-        <span>Модель ИИ</span>
+        <span>AI model</span>
         <select id="setModel">
-          <option value="openai/gpt-oss-120b">GPT-OSS 120B (умнее)</option>
-          <option value="openai/gpt-oss-20b">GPT-OSS 20B (быстрее)</option>
+          <option value="openai/gpt-oss-120b">GPT-OSS 120B (smarter)</option>
+          <option value="openai/gpt-oss-20b">GPT-OSS 20B (faster)</option>
           <option value="qwen/qwen3.8-27b">Qwen 3.8 27B</option>
         </select>
       </label>
     </div>
 
     <div class="dlg-actions">
-      <button class="btn ghost" id="btnTestVoice" type="button">Проверить голос</button>
+      <button class="btn ghost" id="btnTestVoice" type="button">Test voice</button>
       <span class="spacer"></span>
-      <button class="btn ghost" value="cancel" type="button" id="btnCancelSettings">Отмена</button>
-      <button class="btn primary" id="btnSaveSettings" type="button">Сохранить</button>
+      <button class="btn ghost" value="cancel" type="button" id="btnCancelSettings">Cancel</button>
+      <button class="btn primary" id="btnSaveSettings" type="button">Save</button>
     </div>
   </form>
 </dialog>
@@ -310,8 +310,8 @@
     <p id="confirmText"></p>
     <div class="dlg-actions">
       <span class="spacer"></span>
-      <button class="btn ghost" id="confirmNo" type="button">Отмена</button>
-      <button class="btn primary danger-fill" id="confirmYes" type="button">Да</button>
+      <button class="btn ghost" id="confirmNo" type="button">Cancel</button>
+      <button class="btn primary danger-fill" id="confirmYes" type="button">Yes</button>
     </div>
   </div>
 </dialog>
