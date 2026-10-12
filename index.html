@@ -14,7 +14,7 @@
 <header class="topbar">
   <div class="brand">English Tutor</div>
   <div class="topbar-actions">
-    <button class="btn ghost" id="btnNewLesson" type="button">Новый урок</button>
+    <button class="btn ghost" id="btnNewLesson" type="button">Свободный разговор</button>
     <button class="btn ghost" id="btnSettings" type="button">Настройки</button>
   </div>
 </header>
@@ -118,11 +118,25 @@
   <!-- Диалог и слова -->
   <section class="panel">
     <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="chat" type="button">Урок</button>
+      <button class="tab active" data-tab="program" type="button">Программа</button>
+      <button class="tab" data-tab="chat" type="button">Урок</button>
       <button class="tab" data-tab="words" type="button">Мои слова <span class="count" id="wordsCount">0</span></button>
     </div>
 
-    <div class="tab-body" id="tab-chat">
+    <div class="tab-body" id="tab-program">
+      <div class="program-top">
+        <div class="chips" id="levelChips"></div>
+        <button class="btn ghost small" id="btnPlacement" type="button">Вводный разговор</button>
+      </div>
+      <div class="level-start" id="levelStart"></div>
+      <ol class="lessons" id="lessonsList"></ol>
+    </div>
+
+    <div class="tab-body hidden" id="tab-chat">
+      <div class="lesson-bar hidden" id="lessonBar">
+        <div class="lesson-bar-title" id="lessonBarTitle"></div>
+        <button class="btn ghost small" id="btnFinishLesson" type="button">Завершить урок</button>
+      </div>
       <div class="chat" id="chat"></div>
       <form class="composer" id="composer">
         <input type="text" id="textInput" autocomplete="off" placeholder="Напишите или нажмите на микрофон…">
@@ -230,6 +244,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="lessons.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -189,6 +189,50 @@ dialog::backdrop { background: rgba(31,42,43,.35); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.error { background: var(--danger); }
 
+/* --- программа --- */
+.program-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px 6px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; color: var(--muted);
+  background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+}
+.chip:hover { background: #efe8de; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.level-start { padding: 0 16px; }
+.level-start:not(:empty) { padding-top: 6px; }
+.lessons { list-style: none; margin: 0; padding: 10px 16px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.lesson-item {
+  width: 100%; display: flex; align-items: center; gap: 14px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px;
+  transition: border-color .15s, background .15s;
+}
+.lesson-item:hover:not(:disabled) { border-color: var(--accent); background: #f7fbfa; }
+.lesson-item.active { border-color: var(--warm); background: var(--warm-soft); }
+.lesson-item.done .lesson-num { background: var(--accent); color: var(--accent-ink); }
+.lesson-item.locked { cursor: not-allowed; opacity: .55; background: #f3ede4; }
+.lesson-num {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700;
+}
+.lesson-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lesson-ru { font-weight: 700; }
+.lesson-en { font-size: 13px; color: var(--muted); }
+.lesson-status { flex: none; font-size: 13px; font-weight: 600; color: var(--accent); }
+.lesson-item.locked .lesson-status { color: var(--muted); }
+.lesson-item.active .lesson-status { color: var(--warm); }
+
+.lesson-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 16px; background: var(--accent-soft); border-bottom: 1px solid var(--line);
+}
+.lesson-bar-title { font-weight: 700; color: var(--accent); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.note-card {
+  align-self: center; max-width: 90%; background: var(--accent-soft); border: 1px solid #bcd8d3;
+  border-radius: 14px; padding: 12px 16px; font-size: 14px; text-align: left;
+}
+.note-title { font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+
 @media (max-width: 820px) {
   body { height: auto; }
   .layout { grid-template-columns: 1fr; }

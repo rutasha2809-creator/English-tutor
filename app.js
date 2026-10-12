@@ -5,12 +5,13 @@
   'use strict';
 
   const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-  const HISTORY_LIMIT = 14;          // сколько последних реплик отправлять ИИ (бережём лимит токенов)
+  const HISTORY_LIMIT = 16;          // сколько последних реплик отправлять ИИ (бережём лимит токенов)
   const LS = {
     settings: 'et_settings_v1',
     key: 'et_groq_key_v1',
     lesson: 'et_lesson_v1',
     words: 'et_words_v1',
+    progress: 'et_progress_v1',
   };
 
   const DEFAULTS = {
@@ -46,8 +47,16 @@
 
   let settings = { ...DEFAULTS, ...store.get(LS.settings, {}) };
   let apiKey = store.get(LS.key, '');
-  let lesson = store.get(LS.lesson, { messages: [] }); // {role:'teacher'|'student', text, corrections?, words?}
+  // lesson.mode: 'free' (свободный разговор) | 'course' (урок программы) | 'placement' (вводный разговор)
+  // сообщения: {role:'teacher'|'student'|'note', text, corrections?}
+  let lesson = { messages: [], mode: 'free', lessonId: null, ...store.get(LS.lesson, {}) };
   let words = store.get(LS.words, []);                  // {word, translation}
+  // progress.done[id] = {at}; progress.placed — уровень, с которого открыта программа
+  let progress = { done: {}, placed: null, ...store.get(LS.progress, {}) };
+  const CUR = window.CURRICULUM || { levels: [], lessons: [] };
+  const MIN_TURNS_TO_FINISH = 7;   // раньше 7-й реплики ученика урок автоматически не завершается
+  const MIN_TURNS_MANUAL = 4;      // кнопка «Завершить урок» доступна с 4-й реплики
+  let viewLevel = progress.placed || CUR.levels[0] || 'A1';
 
   // ---------- элементы ----------
   const $ = (id) => document.getElementById(id);
@@ -57,6 +66,8 @@
     chat: $('chat'), composer: $('composer'), input: $('textInput'), send: $('btnSend'),
     wordsList: $('wordsList'), wordsCount: $('wordsCount'), clearWords: $('btnClearWords'),
     newLesson: $('btnNewLesson'), btnSettings: $('btnSettings'),
+    levelChips: $('levelChips'), levelStart: $('levelStart'), lessonsList: $('lessonsList'), btnPlacement: $('btnPlacement'),
+    lessonBar: $('lessonBar'), lessonBarTitle: $('lessonBarTitle'), btnFinish: $('btnFinishLesson'),
     dlg: $('settingsDlg'), setKey: $('setKey'), showKey: $('btnShowKey'),
     setLevel: $('setLevel'), setTopic: $('setTopic'), setVoice: $('setVoice'),
     setRate: $('setRate'), rateVal: $('rateVal'), setRecLang: $('setRecLang'), setModel: $('setModel'),
@@ -314,9 +325,21 @@
   let autoMicPaused = false;
 
   // ---------- ИИ-преподаватель ----------
-  function systemPrompt() {
+  function studentTurns() {
+    return lesson.messages.filter((m) => m.role === 'student' && m.text !== '[START]').length;
+  }
+
+  function currentLesson() {
+    return lesson.mode === 'course' ? CUR.lessons.find((l) => l.id === lesson.lessonId) || null : null;
+  }
+
+  const TEACHER_INTRO = 'You are Emily, a warm, patient and encouraging English teacher giving a live one-to-one spoken lesson by video call to an adult Russian-speaking student.';
+  const NO_MARKUP = '- Never use emojis, markdown, lists or special symbols in the reply: it is read aloud.';
+  const CORR_SHAPE = ' "corrections": [{"wrong": "student\'s exact wrong fragment", "right": "corrected fragment", "explain_ru": "короткое объяснение по-русски, 1 предложение"}],';
+
+  function freePrompt() {
     return [
-      'You are Emily, a warm, patient and encouraging English teacher giving a live one-to-one spoken lesson by video call to an adult Russian-speaking student.',
+      TEACHER_INTRO,
       `Student level (CEFR): ${settings.level} — ${LEVEL_NOTES[settings.level]}.`,
       `Lesson topic: ${settings.topic}.`,
       '',
@@ -328,22 +351,98 @@
       '- Correct real grammar, word choice and word order mistakes. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
       '- If the student writes in Russian or asks how to say something, give the English phrase in the reply and invite them to say it.',
       '- If the message is exactly [START], greet the student by introducing yourself briefly and ask an easy opening question on the topic.',
-      '- Never use emojis, markdown, lists or special symbols in the reply: it is read aloud.',
+      NO_MARKUP,
       '',
       'Answer ONLY with a JSON object of this exact shape:',
       '{"reply": "what you say aloud, in English",',
-      ' "corrections": [{"wrong": "student\'s exact wrong fragment", "right": "corrected fragment", "explain_ru": "короткое объяснение по-русски, 1 предложение"}],',
+      CORR_SHAPE,
       ' "new_words": [{"word": "useful English word or phrase from your reply", "translation_ru": "перевод"}]}',
       'Use empty arrays when there are no corrections or no new words. new_words: at most 2 items, only words likely new for this level.',
     ].join('\n');
   }
 
+  function phaseHint(n) {
+    if (n === 0) return 'Phase: opening. Greet the student, say in one very simple sentence what you will practise today, then ask an easy warm-up question.';
+    if (n <= 2) return 'Phase: warm-up and presentation. Present the first 2-3 target phrases or words with a short example, and ask the student to repeat or use them.';
+    if (n <= 5) return 'Phase: presentation and controlled practice. Present the remaining target language in small steps and ask questions that make the student use it.';
+    if (n <= 8) return 'Phase: freer practice. Ask open questions and short role-play prompts that need the target language and the key vocabulary.';
+    if (n <= 10) return 'Phase: final speaking task. Run the final speaking task and let the student speak as much as possible.';
+    if (n <= 13) return 'Phase: wrap-up. Praise the student, give a one-sentence recap in English, say goodbye and set lesson_done to true.';
+    return 'Phase: overtime. Finish immediately: short praise, say goodbye and set lesson_done to true.';
+  }
+
+  function coursePrompt(l) {
+    const n = studentTurns();
+    return [
+      TEACHER_INTRO,
+      `Student level (CEFR): ${l.level} — ${LEVEL_NOTES[l.level]}.`,
+      `This is a structured lesson: "${l.en}".`,
+      `Lesson goal: ${l.goal}`,
+      `Target language: ${l.language}`,
+      `Key vocabulary: ${l.vocab}`,
+      `Final speaking task: ${l.task}`,
+      '',
+      'Rules:',
+      '- Speak ONLY English, in short, simple, clear sentences suited to the level. Never use Russian in your reply.',
+      '- If the student seems lost, simplify, rephrase, give an example sentence and ask them to repeat it.',
+      '- Keep every reply to 1-3 short sentences, like real speech, and end with one question or a small task so the student speaks. The student talks much more than you. Do not lecture.',
+      '- Stay on the lesson goal. Do not jump ahead and do not skip the final speaking task.',
+      '- If the student writes in Russian or asks how to say something, give the English phrase and invite them to say it.',
+      '- The student\'s words come from speech recognition: ignore missing punctuation, capital letters and obvious recognition glitches. Never correct those.',
+      '- Correct real mistakes, most of all in the target language. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
+      '- Set lesson_done to true only in the reply where you say goodbye, and never before the student has spoken at least 7 times.',
+      NO_MARKUP,
+      '',
+      `Student turns so far: ${n}. ${phaseHint(n)}`,
+      '',
+      'Answer ONLY with a JSON object of this exact shape:',
+      '{"reply": "what you say aloud, in English",',
+      CORR_SHAPE,
+      ' "new_words": [{"word": "useful English word or phrase from the lesson", "translation_ru": "перевод"}],',
+      ' "lesson_done": false,',
+      ' "recap_ru": ""}',
+      'Use empty arrays when there are no corrections or no new words. new_words: at most 2 items. recap_ru: empty until lesson_done is true; then 2-3 short Russian sentences: what the student practised today and one thing to improve.',
+    ].join('\n');
+  }
+
+  function placementPrompt() {
+    const n = studentTurns();
+    return [
+      TEACHER_INTRO,
+      'You are running a short spoken placement conversation to estimate the student\'s CEFR level (A1, A2, B1, B2 or C1).',
+      'Speak English in short, clear sentences. Ask exactly 6 questions, ONE per turn, in this order of difficulty:',
+      '1) their name and where they are from (A1); 2) their daily routine (A1-A2); 3) what they did last weekend (A2); 4) a trip or an experience they have had (B1); 5) their opinion about something, with a reason, for example advantages and disadvantages of remote work (B1-B2); 6) a hypothetical or abstract question, for example what they would change in the world if they could (B2-C1).',
+      'Do not teach or correct during the test: always return empty corrections and new_words arrays. React briefly and naturally to each answer before the next question.',
+      'If the student clearly cannot answer even the first two questions in simple English, stop early and give the verdict A1.',
+      NO_MARKUP,
+      '',
+      n === 0
+        ? 'Now: greet the student, say in one simple sentence that you will ask a few questions to find their level, and ask question 1.'
+        : n < 6
+          ? `The student has answered ${n} question${n === 1 ? '' : 's'}. Now ask question ${n + 1}.`
+          : 'The student has answered all 6 questions. Now give the verdict: thank them warmly in 1-2 simple sentences, tell them their level in English and set "level".',
+      '',
+      'Answer ONLY with a JSON object of this exact shape:',
+      '{"reply": "what you say aloud, in English", "corrections": [], "new_words": [], "level": ""}',
+      '"level" must stay an empty string until the verdict; in the verdict it is exactly one of A1, A2, B1, B2, C1.',
+    ].join('\n');
+  }
+
+  function systemPrompt() {
+    if (lesson.mode === 'placement') return placementPrompt();
+    const l = currentLesson();
+    return l ? coursePrompt(l) : freePrompt();
+  }
+
   function buildMessages() {
-    const history = lesson.messages.slice(-HISTORY_LIMIT).map((m) => (
-      m.role === 'teacher'
-        ? { role: 'assistant', content: JSON.stringify({ reply: m.text, corrections: [], new_words: [] }) }
-        : { role: 'user', content: m.text }
-    ));
+    const history = lesson.messages
+      .filter((m) => m.role === 'teacher' || m.role === 'student')
+      .slice(-HISTORY_LIMIT)
+      .map((m) => (
+        m.role === 'teacher'
+          ? { role: 'assistant', content: JSON.stringify({ reply: m.text, corrections: [], new_words: [] }) }
+          : { role: 'user', content: m.text }
+      ));
     return [{ role: 'system', content: systemPrompt() }, ...history];
   }
 
@@ -399,14 +498,22 @@
       if (m) { try { obj = JSON.parse(m[0]); } catch { /* ignore */ } }
     }
     if (!obj || typeof obj.reply !== 'string') {
-      return { reply: clean || 'Sorry, could you say that again?', corrections: [], new_words: [] };
+      return { reply: clean || 'Sorry, could you say that again?', corrections: [], new_words: [], lesson_done: false, recap_ru: '', level: '' };
     }
     const corrections = Array.isArray(obj.corrections) ? obj.corrections
       .filter((c) => c && c.wrong && c.right && String(c.wrong).trim().toLowerCase() !== String(c.right).trim().toLowerCase())
       .slice(0, 3) : [];
     const newWords = Array.isArray(obj.new_words) ? obj.new_words
       .filter((w) => w && w.word && w.translation_ru).slice(0, 3) : [];
-    return { reply: obj.reply.trim(), corrections, new_words: newWords };
+    const lvl = typeof obj.level === 'string' ? obj.level.trim().toUpperCase() : '';
+    return {
+      reply: obj.reply.trim(),
+      corrections,
+      new_words: newWords,
+      lesson_done: obj.lesson_done === true || obj.lesson_done === 'true',
+      recap_ru: typeof obj.recap_ru === 'string' ? obj.recap_ru.trim() : '',
+      level: ['A1', 'A2', 'B1', 'B2', 'C1'].includes(lvl) ? lvl : '',
+    };
   }
 
   async function sendMessage(text, { hidden = false } = {}) {
@@ -420,6 +527,7 @@
     if (!hidden) { lesson.messages.push(studentMsg); renderMessage(studentMsg); }
     else lesson.messages.push(studentMsg);
     saveLesson();
+    updateLessonBar();
 
     busy = true;
     setState('thinking');
@@ -435,10 +543,18 @@
       saveLesson();
       renderMessage(teacherMsg);
       addWords(t.new_words);
+      let ended = false;
+      if (lesson.mode === 'course' && t.lesson_done && studentTurns() >= MIN_TURNS_TO_FINISH) {
+        completeLesson(t.recap_ru);
+        ended = true;
+      } else if (lesson.mode === 'placement' && t.level && studentTurns() >= 3) {
+        finishPlacement(t.level);
+        ended = true;
+      }
       busy = false;
       setState('idle');
       const finished = await speak(t.reply);
-      if (finished && el.autoMic.checked && !autoMicPaused) startListening();
+      if (finished && el.autoMic.checked && !autoMicPaused && !ended) startListening();
     } catch (err) {
       busy = false;
       setState('idle');
@@ -446,6 +562,7 @@
       const idx = lesson.messages.lastIndexOf(studentMsg);
       if (idx >= 0) lesson.messages.splice(idx, 1);
       saveLesson();
+      updateLessonBar();
       if (!hidden) {
         removeLastStudentBubble();
         el.input.value = text;
@@ -466,6 +583,20 @@
 
   function renderMessage(m) {
     if (m.text === '[START]') return; // служебная команда начала урока — не показываем
+    if (m.role === 'note') {
+      const card = document.createElement('div');
+      card.className = 'note-card';
+      if (m.kind === 'recap') {
+        const h = document.createElement('div'); h.className = 'note-title'; h.textContent = 'Итог урока';
+        card.appendChild(h);
+      }
+      const p = document.createElement('div'); p.textContent = m.text;
+      card.appendChild(p);
+      m._el = card;
+      el.chat.appendChild(card);
+      scrollChat();
+      return;
+    }
     const wrap = document.createElement('div');
     wrap.className = 'msg ' + m.role;
     const b = document.createElement('div');
@@ -523,8 +654,14 @@
   }
 
   function saveLesson() {
-    store.set(LS.lesson, { messages: lesson.messages.map(({ _el, ...m }) => m) });
+    store.set(LS.lesson, {
+      mode: lesson.mode,
+      lessonId: lesson.lessonId,
+      messages: lesson.messages.map(({ _el, ...m }) => m),
+    });
   }
+
+  function saveProgress() { return store.set(LS.progress, progress); }
 
   // ---------- слова ----------
   function addWords(list) {
@@ -605,31 +742,172 @@
     const ok = store.set(LS.settings, settings) && store.set(LS.key, apiKey);
     el.dlg.close();
     toast(ok ? 'Настройки сохранены' : 'Не удалось сохранить настройки в браузере', !ok);
-    if (ok && apiKey && prevLevelTopic !== settings.level + '|' + settings.topic && lesson.messages.length) {
+    if (ok && apiKey && prevLevelTopic !== settings.level + '|' + settings.topic && lesson.messages.length && lesson.mode === 'free') {
       systemNote('Новый уровень или тема применятся со следующей реплики');
     }
   }
 
-  // ---------- новый урок ----------
-  async function newLesson() {
+  // ---------- программа и уроки ----------
+  const levelIdx = (lv) => CUR.levels.indexOf(lv);
+  const lessonsOf = (lv) => CUR.lessons.filter((l) => l.level === lv);
+
+  function isLessonOpen(l) {
+    if (progress.done[l.id]) return true;
+    const list = lessonsOf(l.level);
+    const i = list.findIndex((x) => x.id === l.id);
+    if (i > 0) return !!progress.done[list[i - 1].id];
+    const li = levelIdx(l.level);
+    if (li <= 0) return true;                                        // первый урок A1 открыт всегда
+    if (progress.placed && li <= levelIdx(progress.placed)) return true; // уровень выбран вручную или по вводному разговору
+    const prev = lessonsOf(CUR.levels[li - 1]);
+    return prev.length ? !!progress.done[prev[prev.length - 1].id] : true;
+  }
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x.dataset.tab === name));
+    ['program', 'chat', 'words'].forEach((n) => $('tab-' + n).classList.toggle('hidden', n !== name));
+  }
+
+  function renderProgram() {
+    el.levelChips.innerHTML = '';
+    CUR.levels.forEach((lv) => {
+      const list = lessonsOf(lv);
+      const doneCount = list.filter((l) => progress.done[l.id]).length;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip' + (lv === viewLevel ? ' active' : '');
+      b.dataset.level = lv;
+      b.textContent = `${lv} · ${doneCount}/${list.length}`;
+      b.onclick = () => { viewLevel = lv; renderProgram(); };
+      el.levelChips.appendChild(b);
+    });
+
+    const list = lessonsOf(viewLevel);
+    el.levelStart.innerHTML = '';
+    if (list.length && !isLessonOpen(list[0])) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.id = 'btnStartLevel';
+      b.className = 'btn ghost small';
+      b.textContent = `Начать с уровня ${viewLevel}`;
+      b.onclick = () => startFromLevel(viewLevel);
+      el.levelStart.appendChild(b);
+    }
+
+    el.lessonsList.innerHTML = '';
+    list.forEach((l) => {
+      const open = isLessonOpen(l);
+      const done = !!progress.done[l.id];
+      const active = lesson.mode === 'course' && lesson.lessonId === l.id;
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.id = l.id;
+      b.className = 'lesson-item' + (done ? ' done' : '') + (!open ? ' locked' : '') + (active ? ' active' : '');
+      b.disabled = !open;
+      const num = document.createElement('span'); num.className = 'lesson-num'; num.textContent = String(l.n);
+      const txt = document.createElement('span'); txt.className = 'lesson-text';
+      const ru = document.createElement('span'); ru.className = 'lesson-ru'; ru.textContent = l.ru;
+      const en = document.createElement('span'); en.className = 'lesson-en'; en.textContent = l.en;
+      txt.append(ru, en);
+      const st = document.createElement('span'); st.className = 'lesson-status';
+      st.textContent = active ? 'Идёт сейчас' : done ? 'Пройден' : open ? 'Начать' : 'Закрыт';
+      b.append(num, txt, st);
+      b.onclick = () => openLesson(l.id);
+      li.appendChild(b);
+      el.lessonsList.appendChild(li);
+    });
+  }
+
+  function updateLessonBar() {
+    const l = currentLesson();
+    const placement = lesson.mode === 'placement';
+    el.lessonBar.classList.toggle('hidden', !l && !placement);
+    if (l) el.lessonBarTitle.textContent = `${l.level} · Урок ${l.n}: ${l.ru}`;
+    else if (placement) el.lessonBarTitle.textContent = 'Вводный разговор';
+    el.btnFinish.classList.toggle('hidden', !l);
+    el.btnFinish.disabled = !l || studentTurns() < MIN_TURNS_MANUAL;
+  }
+
+  function startFromLevel(level) {
+    progress.placed = level;
+    settings.level = level;
+    store.set(LS.settings, settings);
+    const ok = saveProgress();
+    renderProgram();
+    toast(ok ? `Уровень ${level} открыт` : 'Не удалось сохранить прогресс в браузере', !ok);
+  }
+
+  async function beginSession(next, confirmText, yesLabel) {
     if (busy) return;
+    if (!apiKey) { openSettings(); toast('Сначала вставьте ключ Groq', true); return; }
     if (lesson.messages.length) {
-      const ok = await confirmAction('Начать новый урок? Текущий диалог будет удалён (слова в «Моих словах» останутся).', 'Начать новый');
-      if (!ok) return;
+      if (!(await confirmAction(confirmText, yesLabel))) return;
+      if (busy) return;
     }
     stopListening(true);
     stopSpeaking();
-    lesson = { messages: [] };
+    lesson = { messages: [], mode: next.mode, lessonId: next.lessonId || null };
     saveLesson();
     renderChat();
-    toast('Новый урок начат');
-    startLesson();
-  }
-
-  function startLesson() {
-    if (!apiKey) { openSettings(); return; }
+    renderProgram();
+    updateLessonBar();
+    showTab('chat');
     autoMicPaused = false;
     sendMessage('[START]', { hidden: true });
+  }
+
+  function newLesson() {
+    return beginSession({ mode: 'free' },
+      'Начать новый урок? Текущий диалог будет удалён (слова в «Моих словах» останутся).', 'Начать новый')
+      .then(() => { if (lesson.mode === 'free' && lesson.messages.length) toast('Новый урок начат'); });
+  }
+
+  function startPlacement() {
+    return beginSession({ mode: 'placement' },
+      'Начать вводный разговор? Текущий диалог будет удалён.', 'Начать');
+  }
+
+  async function openLesson(id) {
+    if (busy) return;
+    const l = CUR.lessons.find((x) => x.id === id);
+    if (!l || !isLessonOpen(l)) return;
+    if (lesson.mode === 'course' && lesson.lessonId === id && lesson.messages.length) { showTab('chat'); return; }
+    await beginSession({ mode: 'course', lessonId: id },
+      `Начать урок «${l.ru}»? Текущий диалог будет удалён (слова и пройденные уроки останутся).`, 'Начать');
+  }
+
+  function completeLesson(recapRu) {
+    const id = lesson.lessonId;
+    if (id) progress.done[id] = { at: new Date().toISOString() };
+    const ok = saveProgress();
+    const note = { role: 'note', kind: 'recap', text: recapRu || 'Урок пройден' };
+    lesson.messages.push(note);
+    lesson.mode = 'free';
+    lesson.lessonId = null;
+    saveLesson();
+    renderMessage(note);
+    renderProgram();
+    updateLessonBar();
+    toast(ok ? 'Урок пройден' : 'Не удалось сохранить прогресс в браузере', !ok);
+  }
+
+  function finishPlacement(level) {
+    const start = CUR.levels.includes(level) ? level : CUR.levels[CUR.levels.length - 1];
+    progress.placed = start;
+    settings.level = level;
+    store.set(LS.settings, settings);
+    const ok = saveProgress();
+    const note = { role: 'note', kind: 'level', text: `Ваш уровень: ${level}` };
+    lesson.messages.push(note);
+    lesson.mode = 'free';
+    lesson.lessonId = null;
+    saveLesson();
+    renderMessage(note);
+    viewLevel = start;
+    renderProgram();
+    updateLessonBar();
+    toast(ok ? `Уровень определён: ${level}` : 'Не удалось сохранить прогресс в браузере', !ok);
   }
 
   // ---------- события ----------
@@ -656,11 +934,19 @@
     sendMessage(text);
   });
 
-  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
-    $('tab-chat').classList.toggle('hidden', t.dataset.tab !== 'chat');
-    $('tab-words').classList.toggle('hidden', t.dataset.tab !== 'words');
-  }));
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+  el.btnPlacement.addEventListener('click', startPlacement);
+  el.btnFinish.addEventListener('click', async () => {
+    if (busy || lesson.mode !== 'course' || studentTurns() < MIN_TURNS_MANUAL) return;
+    if (!(await confirmAction('Завершить урок и отметить его пройденным?', 'Завершить'))) return;
+    if (busy || lesson.mode !== 'course') return;
+    autoMicPaused = true;
+    stopListening(true);
+    stopSpeaking();
+    completeLesson('');
+    setState('idle');
+  });
 
   el.clearWords.addEventListener('click', async () => {
     if (!words.length) return;
@@ -704,14 +990,16 @@
   el.autoMic.checked = !!settings.autoMic;
   renderChat();
   renderWords();
+  renderProgram();
+  updateLessonBar();
   setState('idle');
+  showTab(lesson.messages.length ? 'chat' : 'program');
   if (!SR) systemNote('Голосовой ввод работает в Google Chrome и Microsoft Edge. Здесь можно писать текстом.');
-  if (!apiKey) {
-    openSettings();
-  } else if (!lesson.messages.length) {
-    systemNote('Нажмите «Новый урок», чтобы начать');
-  }
+  if (!apiKey) openSettings();
 
   // для автотестов
-  window.__tutor = { parseTeacher, splitSentences, get state() { return state; }, get lesson() { return lesson; } };
+  window.__tutor = {
+    parseTeacher, splitSentences, studentTurns, isLessonOpen,
+    get state() { return state; }, get lesson() { return lesson; }, get progress() { return progress; },
+  };
 })();
