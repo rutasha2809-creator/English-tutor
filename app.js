@@ -335,6 +335,8 @@
 
   const TEACHER_INTRO = 'You are Emily, a warm, patient and encouraging English teacher giving a live one-to-one spoken lesson by video call to an adult Russian-speaking student.';
   const NO_MARKUP = '- Never use emojis, markdown, lists or special symbols in the reply: it is read aloud.';
+  const WORDS_RULES = '- new_words is the student\'s personal list of words to practise, so keep it very short. Add a word ONLY when (a) the student did not know it: they wrote in Russian, asked how to say something, or used a wrong word and you corrected the word choice (reason "asked" or "mistake"), or (b) you use a word or phrase that is clearly above the student\'s level and they are unlikely to know it (reason "new"). NEVER add basic words that any learner already knows: greetings, yes/no, please, thanks, sorry, numbers, colours, days, family members, or phrases like "my name is", "how are you", "nice to meet you". Most turns must have an empty new_words array; at most 1 word per turn.';
+  const WORDS_SHAPE = ' "new_words": [{"word": "English word or phrase", "translation_ru": "перевод", "reason": "asked, mistake or new"}]';
   const CORR_SHAPE = ' "corrections": [{"wrong": "student\'s exact wrong fragment", "right": "corrected fragment", "explain_ru": "короткое объяснение по-русски, 1 предложение"}],';
 
   function freePrompt() {
@@ -351,13 +353,14 @@
       '- Correct real grammar, word choice and word order mistakes. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
       '- If the student writes in Russian or asks how to say something, give the English phrase in the reply and invite them to say it.',
       '- If the message is exactly [START], greet the student by introducing yourself briefly and ask an easy opening question on the topic.',
+      WORDS_RULES,
       NO_MARKUP,
       '',
       'Answer ONLY with a JSON object of this exact shape:',
       '{"reply": "what you say aloud, in English",',
       CORR_SHAPE,
-      ' "new_words": [{"word": "useful English word or phrase from your reply", "translation_ru": "перевод"}]}',
-      'Use empty arrays when there are no corrections or no new words. new_words: at most 2 items, only words likely new for this level.',
+      WORDS_SHAPE + '}',
+      'Use empty arrays when there are no corrections or no new words.',
     ].join('\n');
   }
 
@@ -391,6 +394,7 @@
       '- The student\'s words come from speech recognition: ignore missing punctuation, capital letters and obvious recognition glitches. Never correct those.',
       '- Correct real mistakes, most of all in the target language. Pick at most the 2 most useful corrections per turn. In your spoken reply you may naturally repeat the correct form, but do not list mistakes in the reply itself.',
       '- Set lesson_done to true only in the reply where you say goodbye, and never before the student has spoken at least 7 times.',
+      WORDS_RULES,
       NO_MARKUP,
       '',
       `Student turns so far: ${n}. ${phaseHint(n)}`,
@@ -398,10 +402,10 @@
       'Answer ONLY with a JSON object of this exact shape:',
       '{"reply": "what you say aloud, in English",',
       CORR_SHAPE,
-      ' "new_words": [{"word": "useful English word or phrase from the lesson", "translation_ru": "перевод"}],',
+      WORDS_SHAPE + ',',
       ' "lesson_done": false,',
       ' "recap_ru": ""}',
-      'Use empty arrays when there are no corrections or no new words. new_words: at most 2 items. recap_ru: empty until lesson_done is true; then 2-3 short Russian sentences: what the student practised today and one thing to improve.',
+      'Use empty arrays when there are no corrections or no new words. recap_ru: empty until lesson_done is true; then 2-3 short Russian sentences: what the student practised today and one thing to improve.',
     ].join('\n');
   }
 
@@ -504,7 +508,9 @@
       .filter((c) => c && c.wrong && c.right && String(c.wrong).trim().toLowerCase() !== String(c.right).trim().toLowerCase())
       .slice(0, 3) : [];
     const newWords = Array.isArray(obj.new_words) ? obj.new_words
-      .filter((w) => w && w.word && w.translation_ru).slice(0, 3) : [];
+      .filter((w) => w && w.word && w.translation_ru)
+      .map((w) => ({ ...w, reason: typeof w.reason === 'string' ? w.reason.trim().toLowerCase() : '' }))
+      .slice(0, 2) : [];
     const lvl = typeof obj.level === 'string' ? obj.level.trim().toUpperCase() : '';
     return {
       reply: obj.reply.trim(),
@@ -664,13 +670,26 @@
   function saveProgress() { return store.set(LS.progress, progress); }
 
   // ---------- слова ----------
+  // Совсем базовые слова и фразы никогда не попадают в список, даже если ИИ их предложил.
+  const TRIVIAL_WORDS = new Set([
+    'hello', 'hi', 'hey', 'bye', 'goodbye', 'good morning', 'good afternoon', 'good evening', 'good night',
+    'yes', 'no', 'ok', 'okay', 'please', 'thanks', 'thank you', 'thank you very much', 'sorry', 'excuse me',
+    'fine', 'good', 'bad', 'great', 'nice', 'well', 'very', 'and', 'or', 'but', 'the', 'a', 'an',
+    'i', 'you', 'he', 'she', 'it', 'we', 'they', 'is', 'am', 'are', 'my', 'your',
+    'my name is', "i'm", 'i am', 'i am fine', "i'm fine", 'nice to meet you', 'how are you', 'see you', 'see you later',
+    'what is your name', "what's your name", 'name', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+    'red', 'blue', 'green', 'black', 'white', 'yellow', 'mother', 'father', 'sister', 'brother', 'family', 'friend',
+  ]);
+  const normWord = (w) => String(w).toLowerCase().replace(/[.,!?;:"“”]/g, '').replace(/\s+/g, ' ').trim();
+
   function addWords(list) {
     if (!list || !list.length) return;
     let added = 0;
     list.forEach((w) => {
       const word = String(w.word).trim();
-      if (!word || words.some((x) => x.word.toLowerCase() === word.toLowerCase())) return;
-      words.unshift({ word, translation: String(w.translation_ru).trim() });
+      if (!word || TRIVIAL_WORDS.has(normWord(word))) return;
+      if (words.some((x) => x.word.toLowerCase() === word.toLowerCase())) return;
+      words.unshift({ word, translation: String(w.translation_ru).trim(), reason: w.reason || '' });
       added++;
     });
     if (added) { store.set(LS.words, words); renderWords(); }
@@ -696,7 +715,21 @@
       const say = document.createElement('button');
       say.type = 'button'; say.className = 'icon-btn'; say.textContent = 'Произнести';
       say.onclick = () => speak(w.word);
-      li.append(left, say);
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'icon-btn danger'; del.textContent = 'Убрать';
+      del.onclick = async () => {
+        if (!(await confirmAction(`Убрать слово «${w.word}» из списка?`, 'Убрать'))) return;
+        const i = words.indexOf(w);
+        if (i < 0) return;
+        words.splice(i, 1);
+        const ok = store.set(LS.words, words);
+        renderWords();
+        toast(ok ? 'Слово убрано' : 'Не удалось сохранить список в браузере', !ok);
+      };
+      const actions = document.createElement('div');
+      actions.className = 'word-actions';
+      actions.append(say, del);
+      li.append(left, actions);
       el.wordsList.appendChild(li);
     });
   }
@@ -999,7 +1032,7 @@
 
   // для автотестов
   window.__tutor = {
-    parseTeacher, splitSentences, studentTurns, isLessonOpen,
+    parseTeacher, splitSentences, studentTurns, isLessonOpen, addWords,
     get state() { return state; }, get lesson() { return lesson; }, get progress() { return progress; },
   };
 })();

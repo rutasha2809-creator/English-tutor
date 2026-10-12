@@ -159,6 +159,8 @@ body {
 }
 .words .w { font-weight: 700; }
 .words .t { color: var(--muted); }
+.word-actions { display: flex; gap: 10px; flex: none; }
+.icon-btn.danger { color: var(--danger); }
 .words .empty { border: none; color: var(--muted); justify-content: center; }
 
 /* --- диалоги --- */
